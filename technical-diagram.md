@@ -1,0 +1,118 @@
+# Terraform AWS Serverless Infrastructure - Technical Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                                             │
+│                                      AWS Cloud Infrastructure                                               │
+│                                                                                                             │
+├─────────────────────┬─────────────────────┬─────────────────────┬─────────────────────┬─────────────────────┤
+│                     │                     │                     │                     │                     │
+│   S3 Module         │  CloudFront Module  │  API Gateway Module │   Lambda Module     │    SQS Module       │
+│                     │                     │                     │                     │                     │
+├─────────────────────┼─────────────────────┼─────────────────────┼─────────────────────┼─────────────────────┤
+│                     │                     │                     │                     │                     │
+│ ┌─────────────────┐ │ ┌─────────────────┐ │ ┌─────────────────┐ │ ┌─────────────────┐ │ ┌─────────────────┐ │
+│ │ aws_s3_bucket   │ │ │ aws_cloudfront_ │ │ │ aws_apigatewayv2│ │ │ aws_lambda_     │ │ │ aws_sqs_queue   │ │
+│ │                 │ │ │ origin_access_  │ │ │ _api            │ │ │ function        │ │ │                 │ │
+│ │ - versioning    │ │ │ identity        │ │ │                 │ │ │ (api_handler)   │ │ │ - encryption    │ │
+│ │ - encryption    │ │ │                 │ │ │ - HTTP API      │ │ │                 │ │ │ - retention     │ │
+│ │ - access block  │ │ └────────┬────────┘ │ │ - CORS config   │ │ └────────┬────────┘ │ │ - timeout       │ │
+│ │                 │ │          │          │ │                 │ │          │          │ │                 │ │
+│ └────────┬────────┘ │          │          │ └────────┬────────┘ │          │          │ └────────┬────────┘ │
+│          │          │          │          │          │          │          │          │          │          │
+│          │          │ ┌────────▼────────┐ │ ┌────────▼────────┐ │ ┌────────▼────────┐ │ ┌────────▼────────┐ │
+│          │          │ │ aws_s3_bucket_ │ │ │ aws_apigatewayv2│ │ │ aws_lambda_     │ │ │ aws_sqs_queue   │ │
+│          │          │ │ policy          │ │ │ _stage          │ │ │ function        │ │ │ (DLQ)           │ │
+│          │          │ │                 │ │ │                 │ │ │ (process_queue) │ │ │                 │ │
+│          │          │ │ - OAI access    │ │ │ - auto deploy   │ │ │                 │ │ │ - longer        │ │
+│          │          │ │                 │ │ │ - logging       │ │ │                 │ │ │   retention     │ │
+│          │          │ └────────┬────────┘ │ └────────┬────────┘ │ └────────┬────────┘ │ │                 │ │
+│          │          │          │          │          │          │          │          │ └─────────────────┘ │
+│          │          │          │          │          │          │          │          │                     │
+│          │          │ ┌────────▼────────┐ │ ┌────────▼────────┐ │ ┌────────▼────────┐ │                     │
+│          │          │ │ aws_cloudfront_ │ │ │ aws_apigatewayv2│ │ │ aws_lambda_     │ │                     │
+│          │          │ │ distribution    │ │ │ _route          │ │ │ event_source_   │ │                     │
+│          │          │ │                 │ │ │                 │ │ │ mapping         │ │                     │
+│          │          │ │ - s3 origin     │ │ │ - GET /items    │ │ │                 │ │                     │
+│          │          │ │ - HTTPS         │ │ │ - GET /items/id │ │ │ - SQS trigger   │ │                     │
+│          │          │ │ - caching       │ │ │ - POST /items   │ │ │                 │ │                     │
+│          │          │ └─────────────────┘ │ └────────┬────────┘ │ └─────────────────┘ │                     │
+│          │          │                     │          │          │                     │                     │
+│          │          │                     │ ┌────────▼────────┐ │                     │                     │
+│          │          │                     │ │ aws_apigatewayv2│ │                     │                     │
+│          │          │                     │ │ _integration    │ │                     │                     │
+│          │          │                     │ │                 │ │                     │                     │
+│          │          │                     │ │ - Lambda proxy  │ │                     │                     │
+│          │          │                     │ │                 │ │                     │                     │
+│          │          │                     │ └─────────────────┘ │                     │                     │
+│          │          │                     │                     │                     │                     │
+└──────────┼──────────┴─────────────────────┴─────────────────────┴─────────────────────┴─────────────────────┘
+           │
+           │
+┌──────────▼──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                                             │
+│                                             IAM Module                                                      │
+│                                                                                                             │
+├─────────────────────┬─────────────────────┬─────────────────────┬─────────────────────┬─────────────────────┤
+│                     │                     │                     │                     │                     │
+│ ┌─────────────────┐ │ ┌─────────────────┐ │ ┌─────────────────┐ │ ┌─────────────────┐ │ ┌─────────────────┐ │
+│ │ aws_iam_role    │ │ │ aws_iam_policy  │ │ │ aws_iam_policy  │ │ │ aws_iam_policy  │ │ │ aws_iam_role_   │ │
+│ │                 │ │ │ (s3_access)     │ │ │ (sqs_access)    │ │ │ (cloudwatch)    │ │ │ policy_         │ │
+│ │ - Lambda        │ │ │                 │ │ │                 │ │ │                 │ │ │ attachment      │ │
+│ │   execution     │ │ │ - GetObject     │ │ │ - SendMessage   │ │ │ - CreateLog     │ │ │                 │ │
+│ │   role          │ │ │ - PutObject     │ │ │ - ReceiveMessage│ │ │ - PutLogEvents  │ │ │ - Attaches      │ │
+│ │                 │ │ │ - ListBucket    │ │ │ - DeleteMessage │ │ │                 │ │ │   policies to    │ │
+│ │                 │ │ │ - DeleteObject  │ │ │                 │ │ │                 │ │ │   roles         │ │
+│ └─────────────────┘ │ └─────────────────┘ │ └─────────────────┘ │ └─────────────────┘ │ └─────────────────┘ │
+│                     │                     │                     │                     │                     │
+└─────────────────────┴─────────────────────┴─────────────────────┴─────────────────────┴─────────────────────┘
+```
+
+## Module Dependencies and Data Flow
+
+```
+┌───────────────┐     ┌───────────────┐
+│               │     │               │
+│  S3 Module    ├────►│  CloudFront   │
+│               │     │    Module     │
+└───────┬───────┘     └───────────────┘
+        │
+        │
+        │             ┌───────────────┐     ┌───────────────┐
+        │             │               │     │               │
+        └────────────►│  IAM Module   │◄────┤  SQS Module   │
+                      │               │     │               │
+                      └───────┬───────┘     └───────┬───────┘
+                              │                     │
+                              │                     │
+                      ┌───────▼───────┐     ┌───────▼───────┐
+                      │               │     │               │
+                      │ Lambda Module ├────►│ API Gateway   │
+                      │               │     │    Module     │
+                      └───────────────┘     └───────────────┘
+```
+
+## Resource Relationships
+
+1. **S3 Bucket & CloudFront**:
+   - CloudFront distribution uses S3 bucket as origin
+   - CloudFront OAI provides secure access to S3
+
+2. **Lambda & API Gateway**:
+   - API Gateway routes invoke Lambda functions
+   - Lambda functions process API requests
+
+3. **Lambda & SQS**:
+   - API Handler Lambda sends messages to SQS
+   - Queue Processor Lambda is triggered by SQS events
+
+4. **IAM Roles & All Services**:
+   - Lambda execution role with policies for:
+     - S3 bucket access
+     - SQS queue operations
+     - CloudWatch logging
+
+5. **Monitoring**:
+   - API Gateway stage configured with CloudWatch logging
+   - Lambda functions log to CloudWatch
+   - SQS configured with dead-letter queue for failed messages
