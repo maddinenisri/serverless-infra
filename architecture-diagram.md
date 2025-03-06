@@ -42,16 +42,16 @@
          │                                                                             │   Lambda Function   │
          │                                                                             │  (Queue Processor)  │
          │                                                                             │                     │
-         └────────────────────────────────────────────────────────────────────────────►└─────────┬───────────┘
-                                                                                                 │
-                                                                                                 │ Store/Retrieve
-                                                                                                 │
-                                                                                       ┌─────────▼───────────┐
-                                                                                       │                     │
-                                                                                       │    S3 Bucket        │
-                                                                                       │  (Data Storage)     │
-                                                                                       │                     │
-                                                                                       └─────────────────────┘
+         │                                                                             └─────────┬───────────┘
+         │                                                                                       │
+         │                                                                                       │ Store/Retrieve
+         │                                                                                       │
+         │                                                                             ┌─────────▼───────────┐
+         │                                                                             │                     │
+         │                                                                             │    DynamoDB Table   │
+         │                                                                             │   (Order Storage)   │
+         │                                                                             │                     │
+         │                                                                             └─────────────────────┘
 
                                       ┌─────────────────────────────────────┐
                                       │                                     │
@@ -76,12 +76,13 @@
 3. **Asynchronous Processing:**
    - API Handler Lambda sends messages to SQS queue for background processing
    - Queue Processor Lambda is triggered by messages in SQS
-   - Processed data can be stored in S3
+   - Order data is persisted in DynamoDB
 
 4. **Security:**
    - IAM roles and policies control access between services
-   - Lambda roles have specific permissions for S3, SQS, and CloudWatch
+   - Lambda roles have specific permissions for S3, SQS, DynamoDB, and CloudWatch
    - S3 bucket is private, accessed via CloudFront using Origin Access Identity
+   - DynamoDB table has server-side encryption enabled
 
 5. **Monitoring:**
    - All services log to CloudWatch

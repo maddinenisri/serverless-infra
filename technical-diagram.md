@@ -5,11 +5,11 @@
 │                                                                                                             │
 │                                      AWS Cloud Infrastructure                                               │
 │                                                                                                             │
-├─────────────────────┬─────────────────────┬─────────────────────┬─────────────────────┬─────────────────────┤
-│                     │                     │                     │                     │                     │
-│   S3 Module         │  CloudFront Module  │  API Gateway Module │   Lambda Module     │    SQS Module       │
-│                     │                     │                     │                     │                     │
-├─────────────────────┼─────────────────────┼─────────────────────┼─────────────────────┼─────────────────────┤
+├─────────────────────┬─────────────────────┬─────────────────────┬─────────────────────┬─────────────────────┬─────────────────────┤
+│                     │                     │                     │                     │                     │                     │
+│   S3 Module         │  CloudFront Module  │  API Gateway Module │   Lambda Module     │    SQS Module       │  DynamoDB Module    │
+│                     │                     │                     │                     │                     │                     │
+├─────────────────────┼─────────────────────┼─────────────────────┼─────────────────────┼─────────────────────┼─────────────────────┤
 │                     │                     │                     │                     │                     │
 │ ┌─────────────────┐ │ ┌─────────────────┐ │ ┌─────────────────┐ │ ┌─────────────────┐ │ ┌─────────────────┐ │
 │ │ aws_s3_bucket   │ │ │ aws_cloudfront_ │ │ │ aws_apigatewayv2│ │ │ aws_lambda_     │ │ │ aws_sqs_queue   │ │
@@ -46,7 +46,20 @@
 │          │          │                     │ │                 │ │                     │                     │
 │          │          │                     │ └─────────────────┘ │                     │                     │
 │          │          │                     │                     │                     │                     │
-└──────────┼──────────┴─────────────────────┴─────────────────────┴─────────────────────┴─────────────────────┘
+└──────────┼──────────┴─────────────────────┴─────────────────────┴─────────────────────┴─────────────────────┼─────────────────────┤
+           │                                                                                                  │                     │
+           │                                                                                                  │ ┌─────────────────┐ │
+           │                                                                                                  │ │ aws_dynamodb_   │ │
+           │                                                                                                  │ │ table           │ │
+           │                                                                                                  │ │                 │ │
+           │                                                                                                  │ │ - hash_key      │ │
+           │                                                                                                  │ │ - GSI           │ │
+           │                                                                                                  │ │ - encryption    │ │
+           │                                                                                                  │ │ - recovery      │ │
+           │                                                                                                  │ │                 │ │
+           │                                                                                                  │ └─────────────────┘ │
+           │                                                                                                  │                     │
+└──────────┴──────────────────────────────────────────────────────────────────────────────────────────────────┴─────────────────────┘
            │
            │
 ┌──────────▼──────────────────────────────────────────────────────────────────────────────────────────────────┐
@@ -56,16 +69,29 @@
 ├─────────────────────┬─────────────────────┬─────────────────────┬─────────────────────┬─────────────────────┤
 │                     │                     │                     │                     │                     │
 │ ┌─────────────────┐ │ ┌─────────────────┐ │ ┌─────────────────┐ │ ┌─────────────────┐ │ ┌─────────────────┐ │
-│ │ aws_iam_role    │ │ │ aws_iam_policy  │ │ │ aws_iam_policy  │ │ │ aws_iam_policy  │ │ │ aws_iam_role_   │ │
-│ │                 │ │ │ (s3_access)     │ │ │ (sqs_access)    │ │ │ (cloudwatch)    │ │ │ policy_         │ │
-│ │ - Lambda        │ │ │                 │ │ │                 │ │ │                 │ │ │ attachment      │ │
-│ │   execution     │ │ │ - GetObject     │ │ │ - SendMessage   │ │ │ - CreateLog     │ │ │                 │ │
-│ │   role          │ │ │ - PutObject     │ │ │ - ReceiveMessage│ │ │ - PutLogEvents  │ │ │ - Attaches      │ │
-│ │                 │ │ │ - ListBucket    │ │ │ - DeleteMessage │ │ │                 │ │ │   policies to    │ │
-│ │                 │ │ │ - DeleteObject  │ │ │                 │ │ │                 │ │ │   roles         │ │
+│ │ aws_iam_role    │ │ │ aws_iam_policy  │ │ │ aws_iam_policy  │ │ │ aws_iam_policy  │ │ │ aws_iam_policy  │ │
+│ │                 │ │ │ (s3_access)     │ │ │ (sqs_access)    │ │ │ (dynamodb_access)│ │ │ (cloudwatch)    │ │
+│ │ - Lambda        │ │ │                 │ │ │                 │ │ │                 │ │ │                 │ │
+│ │   execution     │ │ │ - GetObject     │ │ │ - SendMessage   │ │ │ - GetItem       │ │ │ - CreateLog     │ │
+│ │   role          │ │ │ - PutObject     │ │ │ - ReceiveMessage│ │ │ - PutItem       │ │ │ - PutLogEvents  │ │
+│ │                 │ │ │ - ListBucket    │ │ │ - DeleteMessage │ │ │ - UpdateItem    │ │ │                 │ │
+│ │                 │ │ │ - DeleteObject  │ │ │                 │ │ │ - Query         │ │ │                 │ │
 │ └─────────────────┘ │ └─────────────────┘ │ └─────────────────┘ │ └─────────────────┘ │ └─────────────────┘ │
 │                     │                     │                     │                     │                     │
-└─────────────────────┴─────────────────────┴─────────────────────┴─────────────────────┴─────────────────────┘
+└─────────────────────┴─────────────────────┴─────────────────────┴─────────────────────┼─────────────────────┤
+                                                                                        │                     │
+                                                                                        │ ┌─────────────────┐ │
+                                                                                        │ │ aws_iam_role_   │ │
+                                                                                        │ │ policy_         │ │
+                                                                                        │ │ attachment      │ │
+                                                                                        │ │                 │ │
+                                                                                        │ │ - Attaches      │ │
+                                                                                        │ │   policies to    │ │
+                                                                                        │ │   roles         │ │
+                                                                                        │ │                 │ │
+                                                                                        │ └─────────────────┘ │
+                                                                                        │                     │
+└────────────────────────────────────────────────────────────────────────────────────────┴─────────────────────┘
 ```
 
 ## Module Dependencies and Data Flow
@@ -78,18 +104,20 @@
 └───────┬───────┘     └───────────────┘
         │
         │
-        │             ┌───────────────┐     ┌───────────────┐
-        │             │               │     │               │
-        └────────────►│  IAM Module   │◄────┤  SQS Module   │
-                      │               │     │               │
-                      └───────┬───────┘     └───────┬───────┘
-                              │                     │
-                              │                     │
-                      ┌───────▼───────┐     ┌───────▼───────┐
-                      │               │     │               │
-                      │ Lambda Module ├────►│ API Gateway   │
-                      │               │     │    Module     │
-                      └───────────────┘     └───────────────┘
+        │             ┌───────────────┐     ┌───────────────┐     ┌───────────────┐
+        │             │               │     │               │     │               │
+        └────────────►│  IAM Module   │◄────┤  SQS Module   │     │  DynamoDB     │
+                      │               │     │               │     │  Module       │
+                      └───────┬───────┘     └───────┬───────┘     └───────┬───────┘
+                              │                     │                     │
+                              │                     │                     │
+                      ┌───────▼───────┐     ┌───────┴───────┐             │
+                      │               │     │               │             │
+                      │ Lambda Module ├────►│ API Gateway   │             │
+                      │               │◄────┤    Module     │             │
+                      └───────┬───────┘     └───────────────┘             │
+                              │                                           │
+                              └───────────────────────────────────────────┘
 ```
 
 ## Resource Relationships
@@ -106,13 +134,19 @@
    - API Handler Lambda sends messages to SQS
    - Queue Processor Lambda is triggered by SQS events
 
-4. **IAM Roles & All Services**:
+4. **Lambda & DynamoDB**:
+   - Queue Processor Lambda stores order data in DynamoDB
+   - DynamoDB provides persistent storage with GSI for customer queries
+
+5. **IAM Roles & All Services**:
    - Lambda execution role with policies for:
      - S3 bucket access
      - SQS queue operations
+     - DynamoDB table operations
      - CloudWatch logging
 
-5. **Monitoring**:
+6. **Monitoring**:
    - API Gateway stage configured with CloudWatch logging
    - Lambda functions log to CloudWatch
    - SQS configured with dead-letter queue for failed messages
+   - DynamoDB configured with point-in-time recovery
