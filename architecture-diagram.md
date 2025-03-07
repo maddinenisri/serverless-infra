@@ -9,56 +9,64 @@
                                                                       │
                                                                       │ Logs
                                                                       │
-┌─────────────────┐          ┌─────────────────┐          ┌───────────▼─────────┐          ┌─────────────────┐
-│                 │          │                 │          │                     │          │                 │
-│     Users       ├─────────►│   CloudFront    ├─────────►│      S3 Bucket     │          │  API Gateway    │
-│                 │          │  Distribution   │          │   (Static Content) │          │   (HTTP API)    │
-└────────-────────┘          └─────────────────┘          └─────────────────────┘          └────────┬────────┘
-                                                                                                      │
-                                                                                                      │ Invoke
-                                                                                                      │
-                                                                                                      ▼
-                                                                                         ┌─────────────────────┐
-                                                                                         │                     │
-                                                                                         │   Lambda Function   │
-                                                                                         │   (API Handler)     │
-                                                                                         │                     │
-                                                                                         └─────────┬───────────┘
-                                                                                                   │
-                                                                                                   │ Send
-                                                                                                   │ Message
-                                                                                                   ▼
-                                                                                         ┌─────────────────────┐
-                                                                                         │                     │
-                                                                                         │     SQS Queue       │
-                                                                                         │                     │
-                                                                                         └─────────┬───────────┘
-                                                                                                   │
-                                                                                                   │ Trigger
-                                                                                                   │
-                                                                                                   ▼
-                                                                                         ┌─────────────────────┐
-                                                                                         │                     │
-                                                                                         │   Lambda Function   │
-                                                                                         │  (Queue Processor)  │
-                                                                                         │                     │
-                                                                                         └─────────┬───────────┘
-                                                                                                   │
-                                                                                                   │ Store/Retrieve
-                                                                                                   │
-                                                                                         ┌─────────▼───────────┐
-                                                                                         │                     │
-                                                                                         │    DynamoDB Table   │
-                                                                                         │   (Order Storage)   │
-                                                                                         │                     │
-                                                                                         └─────────────────────┘
+┌─────────────────┐          ┌─────────────────┐          ┌───────────▼─────────┐          
+│                 │          │                 │─────────►│                     │          
+│     Users       ├─────────►│   CloudFront    │          │      S3 Bucket     │          
+│                 │          │  Distribution   │          │   (Static Content) │          
+└────────┬────────┘          └────────┬────────┘          └─────────────────────┘          
+                                      │                                                    
+                                      │ /api/v1/*                                         
+                                      ▼                                                    
+                             ┌─────────────────┐                                           
+                             │                 │                                           
+                             │  API Gateway    │                                           
+                             │   (HTTP API)    │                                           
+                             └────────┬────────┘                                           
+                                      │
+                                      │ Invoke
+                                      │
+                                      ▼
+                             ┌─────────────────────┐
+                             │                     │
+                             │   Lambda Function   │
+                             │   (API Handler)     │
+                             │                     │
+                             └─────────┬───────────┘
+                                       │
+                                       │ Send
+                                       │ Message
+                                       ▼
+                             ┌─────────────────────┐
+                             │                     │
+                             │     SQS Queue       │
+                             │                     │
+                             └─────────┬───────────┘
+                                       │
+                                       │ Trigger
+                                       │
+                                       ▼
+                             ┌─────────────────────┐
+                             │                     │
+                             │   Lambda Function   │
+                             │  (Queue Processor)  │
+                             │                     │
+                             └─────────┬───────────┘
+                                       │
+                                       │ Store/Retrieve
+                                       │
+                             ┌─────────▼───────────┐
+                             │                     │
+                             │    DynamoDB Table   │
+                             │   (Order Storage)   │
+                             │                     │
+                             └─────────────────────┘
 
-                                      ┌─────────────────────────────────────┐
-                                      │                                     │
-                                      │      IAM Roles and Policies         │
-                                      │  (Secure access between services)   │
-                                      │                                     │
-                                      └─────────────────────────────────────┘
+                      ┌─────────────────────────────────────┐
+                      │                                     │
+                      │      IAM Roles and Policies         │
+                      │  (Secure access between services)   │
+                      │                                     │
+                      └─────────────────────────────────────┘
 ```
 
 ## Component Interactions
@@ -66,10 +74,10 @@
 1. **User Flow:**
    - Users access the application through CloudFront distribution
    - Static content is served from S3 bucket
-   - API requests are routed to API Gateway
+   - API requests with path pattern /api/v1/* are routed to API Gateway
 
 2. **API Processing:**
-   - API Gateway receives HTTP requests
+   - API Gateway receives HTTP requests from CloudFront
    - Routes requests to the API Handler Lambda function
    - Lambda processes requests and returns responses
 

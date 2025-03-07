@@ -7,8 +7,8 @@ This project contains Terraform modules to provision a serverless AWS architectu
 The infrastructure includes:
 
 - **S3 Bucket**: For static content hosting
-- **CloudFront Distribution**: CDN for delivering content from S3
-- **API Gateway**: HTTP API for serverless backend
+- **CloudFront Distribution**: CDN for delivering both static content and API endpoints
+- **API Gateway**: HTTP API for serverless backend with path-based routing via CloudFront
 - **Lambda Functions**: Serverless compute for API handling and order processing
 - **SQS Queue**: Message queue for asynchronous order processing
 - **DynamoDB Table**: NoSQL database for order persistence
@@ -19,8 +19,9 @@ The infrastructure includes:
 This architecture implements an order processing system:
 
 1. **User Order Submission**:
-   - Users submit order details through the frontend hosted on S3/CloudFront
-   - API Gateway routes the request to the API Handler Lambda function
+   - Users interact with the frontend hosted on S3 and delivered via CloudFront
+   - API requests with path pattern `/api/v1/*` are routed from CloudFront to API Gateway
+   - API Gateway forwards the requests to the API Handler Lambda function
 
 2. **Order Processing**:
    - API Handler Lambda validates the order data
@@ -98,7 +99,8 @@ After deployment, you'll receive the following outputs:
 This infrastructure includes:
 
 - Private S3 bucket with CloudFront OAI access
-- API Gateway with CORS configuration
+- CloudFront with path-based routing for API requests
+- API Gateway with CORS configuration and proper integration with CloudFront
 - IAM least privilege policies
 - SQS with server-side encryption and dead-letter queue
 - DynamoDB with server-side encryption and point-in-time recovery

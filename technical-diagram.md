@@ -100,31 +100,42 @@
 ┌───────────────┐     ┌───────────────┐
 │               │     │               │
 │  S3 Module    ├────►│  CloudFront   │
-│               │     │    Module     │
-└───────┬───────┘     └───────────────┘
-        │
-        │
-        │             ┌───────────────┐     ┌───────────────┐     ┌───────────────┐
-        │             │               │     │               │     │               │
-        └────────────►│  IAM Module   │◄────┤  SQS Module   │     │  DynamoDB     │
-                      │               │     │               │     │  Module       │
-                      └───────┬───────┘     └───────┬───────┘     └───────┬───────┘
-                              │                     │                     │
-                              │                     │                     │
-                      ┌───────▼───────┐     ┌───────┴───────┐             │
-                      │               │     │               │             │
-                      │ Lambda Module ├────►│ API Gateway   │             │
-                      │               │◄────┤    Module     │             │
-                      └───────┬───────┘     └───────────────┘             │
-                              │                                           │
-                              └───────────────────────────────────────────┘
+│               │     │    Module     │◄────┐
+└───────┬───────┘     └───────────────┘     │
+        │                                   │
+        │                                   │
+        │             ┌───────────────┐     │
+        │             │               │     │
+        └────────────►│  IAM Module   │◄────┼─────┬───────────────┐     ┌───────────────┐
+                      │               │     │     │               │     │               │
+                      └───────┬───────┘     │     │  SQS Module   │     │  DynamoDB     │
+                              │             │     │               │     │  Module       │
+                              │             │     └───────┬───────┘     └───────┬───────┘
+                              │             │             │                     │
+                              │             │             │                     │
+                      ┌───────▼───────┐     │     ┌───────┴───────┐             │
+                      │               │     │     │               │             │
+                      │ Lambda Module ├─────┼────►│ API Gateway   │             │
+                      │               │◄────┼─────┤    Module     │             │
+                      └───────┬───────┘     │     └───────────────┘             │
+                              │             │                                   │
+                              └─────────────┼───────────────────────────────────┘
+                                            │
+                                            │
+                                            │
 ```
 
 ## Resource Relationships
 
 1. **S3 Bucket & CloudFront**:
-   - CloudFront distribution uses S3 bucket as origin
+   - CloudFront distribution uses S3 bucket as primary origin
    - CloudFront OAI provides secure access to S3
+   - Default cache behavior serves static content
+
+2. **CloudFront & API Gateway**:
+   - CloudFront uses API Gateway as secondary origin
+   - Path pattern "/api/v1/*" routes to API Gateway
+   - Ordered cache behavior with appropriate forwarded values
 
 2. **Lambda & API Gateway**:
    - API Gateway routes invoke Lambda functions

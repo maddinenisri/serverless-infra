@@ -13,6 +13,16 @@ variable "s3_bucket_regional_domain_name" {
   type        = string
 }
 
+variable "api_gateway_domain_name" {
+  description = "Domain name of the API Gateway"
+  type        = string
+}
+
+variable "api_gateway_stage" {
+  description = "Stage name of the API Gateway"
+  type        = string
+}
+
 variable "environment" {
   description = "Environment name"
   type        = string

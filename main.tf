@@ -73,11 +73,16 @@ module "api_gateway" {
 # Create CloudFront distribution
 module "cloudfront" {
   source     = "./modules/cloudfront"
-  depends_on = [module.s3] # Explicit dependency
+  depends_on = [module.s3, module.api_gateway] # Explicit dependency on both S3 and API Gateway
 
   s3_bucket_id                   = module.s3.bucket_id
   s3_bucket_domain_name          = module.s3.bucket_domain_name
   s3_bucket_regional_domain_name = module.s3.bucket_regional_domain_name
-  environment                    = var.environment
-  tags                           = var.default_tags
+
+  # Extract domain name from API Gateway URL (remove https:// and path)
+  api_gateway_domain_name = replace(replace(module.api_gateway.api_url, "/^https:\\/\\//", ""), "/\\/.*$/", "")
+  api_gateway_stage       = module.api_gateway.stage_name
+
+  environment = var.environment
+  tags        = var.default_tags
 }
